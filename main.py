@@ -1,5 +1,6 @@
 from peers import Peers
 from seeds import Seeds
+import time 
 
 if __name__ == "__main__":
     config_file = open("config.txt", "r")
@@ -7,6 +8,7 @@ if __name__ == "__main__":
     config_file.close()
     seeds = []
     peers = []
+    
     # Creating instances of seeds and storing them in a list
     for i in range(len(config)):
         # If there is wrong formatting in the config file, ignore it       
@@ -30,6 +32,8 @@ if __name__ == "__main__":
         peer.connect(seeds) #randomly selects the seed to connect (n/2)+1
         peers.append(peer)
 
+    time.sleep(10)
+    
     for seed in seeds:
         seed.close()
     for peer in peers:
