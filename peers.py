@@ -78,6 +78,9 @@ class Peers:
         try:
             seed_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)     # No need to bind to any port or ip it is in built handled by os
             seed_socket.connect((str(seed.ip) , int(seed.port)))
+            
+            #sending the server port of peer to seed
+            seed_socket.sendall(f"PEER_SERVER:{self.port}".encode('utf-8'))
             self.seed_connections.append(seed_socket)
             print(f"Peer(client)({self.ip}:{self.port}) -> Connected to {seed.ip}:{seed.port}")
         except socket.error as e:
