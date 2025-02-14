@@ -30,8 +30,16 @@ class Peers:
         # for seed in self.seed_list:
         #     print(seed.ip, "   " ,seed.port)
         # print("----")
+        
+        #requesting the peer list from seeds 
+        all_peers_requested = self.request_peer_lists()
+        print("Received peer list from seeds",all_peers_requested)
+        
+        
 
-
+    def request_peer_lists(self):
+        pass
+    
     def accept_connections(self):
         while True:
             try:
