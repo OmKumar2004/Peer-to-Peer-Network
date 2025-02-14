@@ -31,7 +31,7 @@ class Seeds:
             try:
                 connection, address = self.server_socket.accept()           # Accepting all incoming connections
                 print(f"Seed({self.ip}:{self.port}) -> New connection from {address[0]}:{address[1]}")
-                self.peer_list.append((address[0],address[1]))
+                # self.peer_list.append((address[0],address[1]))
                 #handling the connection in a different thread
                 thread = threading.Thread(target=self.handle_peer_connection,args=(connection,address),daemon=True)
                 thread.start()
@@ -47,9 +47,14 @@ class Seeds:
                 data = connection.recv(1024)
                 if not data:
                     break
-                # print(f"Received data from {address[0]}:{address[1]}: {data.decode('utf-8')}")          #L Will now handle the data 
-                if data == b"REQUEST_PEER_LIST":
-                    peer_list_str = '\n'.join([f"{ip}:{port}" for ip, port in self.peer_list]) # Formatted peer list as a string with each peer on a new line
+                
+                message = data.decode('utf-8')
+                  
+                if message.startswith("PEER_SERVER:"):
+                    server_port = int(message.split(":")[1])
+                    self.peer_list.append((address[0], server_port))
+                elif data == b"REQUEST_PEER_LIST":
+                    peer_list_str = '\n'.join([f"{ip}:{port}" for ip, port in self.peer_list])
                     connection.sendall(peer_list_str.encode('utf-8'))
 
             except Exception as e:
