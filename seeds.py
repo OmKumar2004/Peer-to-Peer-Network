@@ -12,7 +12,7 @@ class Seeds:
 
 
     def creation(self):  # activate it
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #creating a TCP/IP socket
         try:
             s.bind((self.ip, self.port))
             s.listen(5)  # 5 is the maximum number of queued connections
@@ -24,24 +24,29 @@ class Seeds:
         except socket.error as e:
             print(f"Failed to activate seed on {self.ip}:{self.port}. Error: {e}")
 
-
+    #runs in background to acceps incomiing connections
     def accept_connections(self):
         while True:
             try:
-                client_socket, address = self.server_socket.accept()
+                client_socket, address = self.server_socket.accept() #waiting for new connections
                 print(f"New connection from {address[0]}:{address[1]}")
-                # Add the new peer to peer_list
-                self.peer_list.append((address[0], address[1]))
-                # You might want to start a new thread to handle communication with this peer
+                #handling the connection in a different thread
+                thread = threading.Thread(target=self.handle_peer_connection,args=(client_socket,address),daemon=True)
+                # self.peer_list.append((address[0], address[1]))
             except Exception as e:
                 print(f"Error accepting connection: {e}")
                 break
     
-    def new_peer_registration(self, ip, port):  # registering new peers
-        return ip, port
-
-    def remove_dead_peer(self, msg_dead):  # removing dead peers
+    #handles the new peer connection
+    def handle_peer_connection(self,client_socket,address):
         pass
+            
+    
+    # def new_peer_registration(self, ip, port):  # registering new peers
+    #     return ip, port
+
+    # def remove_dead_peer(self, msg_dead):  # removing dead peers
+    #     pass
 
     def close(self):
         if self.server_socket:
@@ -49,4 +54,8 @@ class Seeds:
             print(f"Seed server on {self.ip}:{self.port} closed.")
 
 if __name__ == "__main__":
-    pass
+    #to test the code 
+    seed = Seeds("127.0.0.1",8000)
+    seed.creation();
+    seed.close()
+    
