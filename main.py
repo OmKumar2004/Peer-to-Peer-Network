@@ -34,9 +34,10 @@ if __name__ == "__main__":
         peers.append(peer)
 
     time.sleep(15)
-    
-    for seed in seeds:
-        seed.close()
     for peer in peers:
         peer.close()
+    time.sleep(5)
+    for seed in seeds:
+        seed.close()
+    
     
