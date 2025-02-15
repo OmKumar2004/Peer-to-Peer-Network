@@ -5,8 +5,8 @@ Todos
 - [x] seed acting as client
 - [x] implemented successful data transfer between peer-peer and peer-seed
 - [x] handled the issue of having peer port as client in peer list of seed 
-- [ ] Message Passing (normal, death, ping)
-- [ ] Dead Node implementation and removal
-- [ ] Ping mechanism (will be like message only)
-- [ ] handling the sudden death of peer externally
+- [x] Message Passing (normal, death, ping)
+- [x] Dead Node implementation and removal (partially done)
+- [x] Ping mechanism (will be like message only)
+- [ ] handling the sudden death of peer externally (like keyboard interrupt,closing of ports)
 - [ ] Powerlaw distribution (imp)
