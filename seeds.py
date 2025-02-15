@@ -1,6 +1,7 @@
 import socket
 import threading
 import os
+from typing import List
 
 class Seeds:
     def __init__(self, ip, port):
@@ -8,7 +9,7 @@ class Seeds:
         self.ip = ip
         self.port = int(port)
         self.server_socket = None
-        self.seed_sockets = []
+        self.seed_sockets: List[socket.socket] = []
         self.peer_list = []
         self.running_status = True
 
@@ -74,12 +75,33 @@ class Seeds:
             
 
 
-
+    # def close(self):
+    #     self.running_status = False
+    #     if self.server_socket:
+    #         self.server_socket.close()
+    #         print(f"Seed server on {self.ip}:{self.port} closed.")
+    #     for conn in self.seed_sockets:
+    #         conn.close()
+    
     def close(self):
         self.running_status = False
         if self.server_socket:
+            try:
+                self.server_socket.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
             self.server_socket.close()
             print(f"Seed server on {self.ip}:{self.port} closed.")
+
+        for conn in self.seed_sockets:
+            try:
+                conn.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
+            try:
+                conn.close()
+            except Exception as e:
+                print(f"Error closing a seed connection: {e}")
 
 
     
