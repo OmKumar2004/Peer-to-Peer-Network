@@ -91,7 +91,7 @@ class Peers:
             for peer in self.peer_connections:
                 thread = threading.Thread(target=self.gossip_sender_peer, args=(peer,message_hash), daemon=True)
                 thread.start()
-            time.sleep(5)
+            time.sleep(30)
     
     def gossip_sender_peer(self, peer: socket.socket, message_hash: int):
         try:
