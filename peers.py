@@ -78,9 +78,12 @@ class Peers:
             peer_socket.sendall("PING".encode('utf-8'))
             print(f"Peer(client)({self.ip}:{self.port}) -> Sent: PING to {peer_socket.getpeername()}")
             # Use select to wait for a response with a timeout
+            print("-------------------------hihihihihi--------------------")
             readable, _, _ = select.select([peer_socket], [], [], PING_MAX_WAIT)
             if readable:
+                print("-------------------------qqqqqqqqqqqqqq--------------------")
                 response = peer_socket.recv(1024).decode('utf-8')
+                print("-------------------------wwwwwwwwwwwwwwwwwwww--------------------")
                 if response == "PONG":
                     print(f"Peer(client)({self.ip}:{self.port}) -> Received: Ping_back from {peer_socket.getpeername()}")
                     self.ping_tracker[peer_socket] = 0 
