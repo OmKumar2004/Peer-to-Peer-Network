@@ -3,6 +3,7 @@ import socket
 import threading
 from typing import List
 import time
+import select
 
 PING_INTERVAL = 2
 PING_MAX_WAIT = 5
@@ -67,31 +68,60 @@ class Peers:
                 thread = threading.Thread(target=self.ping_sender_peer, args=(peer_socket,), daemon=True)
                 thread.start()
             time.sleep(PING_INTERVAL)
-            
+
+    
     def ping_sender_peer(self, peer_socket: socket.socket):
-        peer_socket.settimeout(PING_MAX_WAIT)
+        # Remove the explicit timeout setting
         if peer_socket not in self.ping_tracker:
             self.ping_tracker[peer_socket] = 0
         try:
             peer_socket.sendall("PING".encode('utf-8'))
             print(f"Peer(client)({self.ip}:{self.port}) -> Sent: PING to {peer_socket.getpeername()}")
-            respose = peer_socket.recv(1024).decode('utf-8')
-            if respose == "PONG":
-                print(f"Peer(client)({self.ip}:{self.port}) -> Received: Ping_back from {peer_socket.getpeername()}")
-                self.ping_tracker[peer_socket] = 0 
-        except socket.timeout:
-            print(f"Peer(client)({self.ip}:{self.port}) -> Ping timed out for {peer_socket.getpeername()}")
-            self.ping_tracker[peer_socket] += 1
-            if self.ping_tracker[peer_socket] >= 3:
-                print(f"Peer(client)({self.ip}:{self.port}) -> Peer {peer_socket.getpeername()} is dead")
-                self.peer_connections.remove(peer_socket)
-                self.peer_list.remove(peer_socket.getpeername())
-                
-                for seed_socket in self.seed_connections:
-                    seed_socket.sendall(f"DEAD_NODE:{peer_socket.getpeername()[0]}:{peer_socket.getpeername()[1]}:{time.strftime('%H:%M:%S')}:{self.ip}:{self.port}".encode('utf-8'))
-                peer_socket.close()
+            # Use select to wait for a response with a timeout
+            readable, _, _ = select.select([peer_socket], [], [], PING_MAX_WAIT)
+            if readable:
+                response = peer_socket.recv(1024).decode('utf-8')
+                if response == "PONG":
+                    print(f"Peer(client)({self.ip}:{self.port}) -> Received: Ping_back from {peer_socket.getpeername()}")
+                    self.ping_tracker[peer_socket] = 0 
+            else:
+                print(f"Peer(client)({self.ip}:{self.port}) -> Ping timed out for {peer_socket.getpeername()}")
+                self.ping_tracker[peer_socket] += 1
+                if self.ping_tracker[peer_socket] >= 3:
+                    print(f"Peer(client)({self.ip}:{self.port}) -> Peer {peer_socket.getpeername()} is dead")
+                    self.peer_connections.remove(peer_socket)
+                    self.peer_list.remove(peer_socket.getpeername())
+                    for seed_socket in self.seed_connections:
+                        dead_msg = f"DEAD_NODE:{peer_socket.getpeername()[0]}:{peer_socket.getpeername()[1]}:{time.strftime('%H:%M:%S')}:{self.ip}:{self.port}"
+                        seed_socket.sendall(dead_msg.encode('utf-8'))
+                    # peer_socket.close()  #commenting this to prevent the peer from closing the connection
         except Exception as e:
             print(f"Peer(client)({self.ip}:{self.port}) -> Error sending pong to {peer_socket.getpeername()}: {e}")
+            
+    # def ping_sender_peer(self, peer_socket: socket.socket):
+    #     peer_socket.settimeout(PING_MAX_WAIT)
+    #     if peer_socket not in self.ping_tracker:
+    #         self.ping_tracker[peer_socket] = 0
+    #     try:
+    #         peer_socket.sendall("PING".encode('utf-8'))
+    #         print(f"Peer(client)({self.ip}:{self.port}) -> Sent: PING to {peer_socket.getpeername()}")
+    #         respose = peer_socket.recv(1024).decode('utf-8')
+    #         if respose == "PONG":
+    #             print(f"Peer(client)({self.ip}:{self.port}) -> Received: Ping_back from {peer_socket.getpeername()}")
+    #             self.ping_tracker[peer_socket] = 0 
+    #     except socket.timeout:
+    #         print(f"Peer(client)({self.ip}:{self.port}) -> Ping timed out for {peer_socket.getpeername()}")
+    #         self.ping_tracker[peer_socket] += 1
+    #         if self.ping_tracker[peer_socket] >= 3:
+    #             print(f"Peer(client)({self.ip}:{self.port}) -> Peer {peer_socket.getpeername()} is dead")
+    #             self.peer_connections.remove(peer_socket)
+    #             self.peer_list.remove(peer_socket.getpeername())
+                
+    #             for seed_socket in self.seed_connections:
+    #                 seed_socket.sendall(f"DEAD_NODE:{peer_socket.getpeername()[0]}:{peer_socket.getpeername()[1]}:{time.strftime('%H:%M:%S')}:{self.ip}:{self.port}".encode('utf-8'))
+    #             peer_socket.close()
+    #     except Exception as e:
+    #         print(f"Peer(client)({self.ip}:{self.port}) -> Error sending pong to {peer_socket.getpeername()}: {e}")
         
     def ping_receiver(self):
         while self.running_status and not self.isDead:

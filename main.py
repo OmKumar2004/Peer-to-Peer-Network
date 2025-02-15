@@ -35,9 +35,9 @@ if __name__ == "__main__":
         peer.creation()
         peer.connect(seeds_connection) #randomly selects the seed to connect (n/2)+1
         #randomly select the peer from the peer list and check if it is alive and make it as dead
-        # if random.randint(1, 100) <= 20:
-        #     peer.isDead = True
-        #     print(f"Simulating death for peer {peer.ip}:{peer.port}")
+        if random.randint(1, 100) <= 60:
+            peer.isDead = True
+            print(f"Simulating death for peer {peer.ip}:{peer.port}")
         peers.append(peer)
            
         

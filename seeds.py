@@ -63,7 +63,7 @@ class Seeds:
                     dead_ip, dead_port = message.split(":")[1], message.split(":")[2]
                     self.peer_list.remove((dead_ip), int(dead_port))
                     self.seed_sockets.remove(connection)
-                    connection.close()
+                    # connection.close()         #commenting this to prevent the seed from closing the connection   
                     print(f"Seed({self.ip}:{self.port}) -> Peer {dead_ip}:{dead_port} marked as dead.")
                            
                     
