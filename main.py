@@ -33,7 +33,7 @@ if __name__ == "__main__":
         peer.connect(seeds) #randomly selects the seed to connect (n/2)+1
         peers.append(peer)
 
-    time.sleep(10)
+    time.sleep(15)
     
     for seed in seeds:
         seed.close()
