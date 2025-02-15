@@ -8,7 +8,7 @@ class Seeds:
         self.ip = ip
         self.port = int(port)
         self.server_socket = None
-        
+        self.seed_sockets = []
         self.peer_list = []
         self.running_status = True
 
@@ -53,19 +53,18 @@ class Seeds:
                 if message.startswith("PEER_SERVER:"):
                     server_port = int(message.split(":")[1])
                     self.peer_list.append((address[0], server_port))
+                    self.seed_sockets.append(connection)
+                    
                 elif message.startswith("REQUEST_PEER_LIST"):
                     peer_list_str = '\n'.join([f"{ip}:{port}" for ip, port in self.peer_list])
                     connection.sendall(peer_list_str.encode('utf-8'))
                 elif message.startswith("DEAD_NODE:"):
-                    parts = message.split(":")
-                    if len(parts)>=5:
-                        dead_ip = parts[1]
-                        dead_port =parts[2]
-                        dead_peer = (dead_ip, dead_port)
-                        if dead_peer in self.peer_list:
-                            self.peer_list.remove(dead_peer)    
-                    else:
-                        print(f"Seed({self.ip}:{self.port}) -> Invalid message: {message}")        
+                    dead_ip, dead_port = message.split(":")[1], message.split(":")[2]
+                    self.peer_list.remove((dead_ip), int(dead_port))
+                    self.seed_sockets.remove(connection)
+                    connection.close()
+                    print(f"Seed({self.ip}:{self.port}) -> Peer {dead_ip}:{dead_port} marked as dead.")
+                           
                     
                 
             except Exception as e:

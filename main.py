@@ -1,6 +1,7 @@
 from peers import Peers
 from seeds import Seeds
 import time 
+import random
 
 if __name__ == "__main__":
     config_file = open("config.txt", "r")
@@ -17,7 +18,7 @@ if __name__ == "__main__":
         config[i] = config[i].strip()
         seed = Seeds(config[i].split(':')[0], config[i].split(':')[1])
         seed.creation()
-        seeds.append(seed)
+        seeds.append((seed.ip, int(seed.port)))
         # print(seed.ip,"   ", seed.port)
 
 
@@ -31,9 +32,12 @@ if __name__ == "__main__":
         peer_port+=1
         peer.creation()
         peer.connect(seeds) #randomly selects the seed to connect (n/2)+1
+        #randomly select the peer from the peer list and check if it is alive and make it as dead
+        # if random.randint(1, 100) <= 20:
+        #     peer.isDead = True
+        #     print(f"Simulating death for peer {peer.ip}:{peer.port}")
         peers.append(peer)
-        
-        
+           
         
         
     try:
