@@ -16,6 +16,10 @@ class Peers:
         self.seed_connections: List[socket.socket] = []       # List of sockets of connections when it is behaving as client
         self.peer_connections = []
         
+        self.message_hashes = set()
+        
+        
+        
     def creation(self):  # activate (fulfiling it as server)
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.ip, self.port))
@@ -91,12 +95,14 @@ class Peers:
                 
         for seed_socket in self.seed_connections:
             try:
-                print("hi 5")
-                seed_socket.sendall(b"REQUEST_PEER_LIST")
-                print("hi 6")
+                # print("hi 5")
+                # seed_socket.sendall(b"REQUEST_PEER_LIST")
+                seed_socket.sendall(f"REQUEST_PEER_LIST:{self.port}".encode('utf-8'))
+                # print("hi 6")
                 peer_list_str = seed_socket.recv(1024)
                 peer_list_str = peer_list_str.decode('utf-8')
-                print("hi 7")
+                # print("hi 7")
+                
                 # Split the received string into individual peer entries
                 if peer_list_str:
                     peers = peer_list_str.split('\n')

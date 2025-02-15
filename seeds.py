@@ -53,10 +53,21 @@ class Seeds:
                 if message.startswith("PEER_SERVER:"):
                     server_port = int(message.split(":")[1])
                     self.peer_list.append((address[0], server_port))
-                elif data == b"REQUEST_PEER_LIST":
+                elif message.startswith("REQUEST_PEER_LIST"):
                     peer_list_str = '\n'.join([f"{ip}:{port}" for ip, port in self.peer_list])
                     connection.sendall(peer_list_str.encode('utf-8'))
-
+                elif message.startswith("DEAD_NODE:"):
+                    parts = message.split(":")
+                    if len(parts)>=5:
+                        dead_ip = parts[1]
+                        dead_port =parts[2]
+                        dead_peer = (dead_ip, dead_port)
+                        if dead_peer in self.peer_list:
+                            self.peer_list.remove(dead_peer)    
+                    else:
+                        print(f"Seed({self.ip}:{self.port}) -> Invalid message: {message}")        
+                    
+                
             except Exception as e:
                 print(f"Seed({self.ip}:{self.port}) -> Error handling peer connection: {e}")
                 break
