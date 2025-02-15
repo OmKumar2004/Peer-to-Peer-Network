@@ -5,7 +5,7 @@ from typing import List
 import time
 
 PING_INTERVAL = 2
-PING_MAX_WAIT = 2
+PING_MAX_WAIT = 5
 GOSSIP_SEND_INTERVAL = 15
 NUM_MESSAGES = 10
 
@@ -48,8 +48,8 @@ class Peers:
             print(peer)
         self.connect_to_peers()
         
-        # thread_ping_sender = threading.Thread(target=self.ping_sender, daemon=True)
-        # thread_ping_sender.start()
+        thread_ping_sender = threading.Thread(target=self.ping_sender, daemon=True)
+        thread_ping_sender.start()
         
         thread_ping_receiver = threading.Thread(target=self.ping_receiver, daemon=True)
         thread_ping_receiver.start()
@@ -64,12 +64,14 @@ class Peers:
     def ping_sender(self):
         while self.running_status and not self.isDead:
             for peer_socket in self.peer_connections:
-                thread = threading.Thread(target=self.ping_sender_peer, args=(peer_socket), daemon=True)
+                thread = threading.Thread(target=self.ping_sender_peer, args=(peer_socket,), daemon=True)
                 thread.start()
             time.sleep(PING_INTERVAL)
             
     def ping_sender_peer(self, peer_socket: socket.socket):
         peer_socket.settimeout(PING_MAX_WAIT)
+        if peer_socket not in self.ping_tracker:
+            self.ping_tracker[peer_socket] = 0
         try:
             peer_socket.sendall("PING".encode('utf-8'))
             print(f"Peer(client)({self.ip}:{self.port}) -> Sent: PING to {peer_socket.getpeername()}")
@@ -84,8 +86,8 @@ class Peers:
                 print(f"Peer(client)({self.ip}:{self.port}) -> Peer {peer_socket.getpeername()} is dead")
                 self.peer_connections.remove(peer_socket)
                 self.peer_list.remove(peer_socket.getpeername())
+                
                 for seed_socket in self.seed_connections:
-                    # seed_socket.sendall(f"DEAD_NODE:{peer_socket.getpeername()[0]}:{peer_socket.getpeername()[1]}:{time.strftime("%H:%M:%S")}:{self.ip}:{self.port}".encode('utf-8'))
                     seed_socket.sendall(f"DEAD_NODE:{peer_socket.getpeername()[0]}:{peer_socket.getpeername()[1]}:{time.strftime('%H:%M:%S')}:{self.ip}:{self.port}".encode('utf-8'))
                 peer_socket.close()
         except Exception as e:
@@ -96,13 +98,15 @@ class Peers:
             for seed_socket in self.seed_connections:
                 try:
                     data = seed_socket.recv(1024).decode('utf-8')
-                    if data.startswithwith("PING"):
+                    if not data:
+                        continue
+                    if data.startswith("PING"):
                         seed_socket.sendall("PONG".encode('utf-8'))
                         print(f"Peer(client)({self.ip}:{self.port}) -> Received: PING from {seed_socket.getpeername()}")
                     else:
                         continue
                 except Exception as e:
-                            print(f"Peer(client)({self.ip}:{self.port}) -> Error receiving data from {seed_socket.getpeername()}: {e}")
+                    print(f"Peer(client)({self.ip}:{self.port}) -> Error receiving data from {seed_socket.getpeername()}: {e}")
                     
     
     def gossip_sender_all(self):
@@ -120,7 +124,7 @@ class Peers:
     # Modify gossip_receiver to handle multiple or concatenated messages
     def gossip_receiver(self):
         buffer = ""
-        while self.running_status:
+        while self.running_status and not self.isDead:
             try:
                 for peer in self.peer_connections:
                     data = peer.recv(1024)
@@ -136,7 +140,7 @@ class Peers:
                                     message_hash = int(line.split("GOSSIP:")[1])
                                 except ValueError:
                                     print(f"Failed to parse message hash from: {line}")
-                                    continue
+                                    break
                                 if message_hash not in self.message_hashes:
                                     self.message_hashes.add(message_hash)
                                     for peer_socket in self.peer_connections:
@@ -157,7 +161,7 @@ class Peers:
             print(f"Peer(server)({self.ip}:{self.port}) -> Error sending gossip to peer: {e}")
             
     def accept_connections(self):
-        while self.running_status:
+        while self.running_status and not self.isDead:
             try:
                 connection, address = self.server_socket.accept()
                 print(f"Peer(server)({self.ip}:{self.port}) -> New connection from {address[0]}:{address[1]}")
@@ -219,27 +223,59 @@ class Peers:
                 peer_socket.connect((peer[0], peer[1]))
                 print("p1")
                 self.peer_connections.append(peer_socket)
+                
+                self.ping_tracker[peer_socket]=0
                 print(f"Peer(client)({self.ip}:{self.port}) -> Connected to peer {peer[0]}:{peer[1]}")
                 # peer_socket.sendall("Hello from Peer(client)".encode('utf-8'))
                 
             except socket.error as e:
                 print(f"Peer(client)({self.ip}:{self.port}) -> Failed to connect to peer {peer[0]}:{peer[1]}. Error:{e}")
 
+    # def close(self):
+    #     self.running_status = False
+    #     if self.server_socket:
+            
+    #         self.server_socket.close()
+    #         print(f"Peer on {self.ip}:{self.port} closed.")
+            
+    #     for conn in self.seed_connections:
+    #         try:
+    #             conn.close()
+    #         except Exception as e:
+    #             print(f"Error closing a peer to seed connection: {e}")
+    #     for conn in self.peer_connections:
+    #         try:
+    #             conn.close()
+    #         except Exception as e:
+    #             print(f"Error closing a peer to peer connection: {e}")
+
     def close(self):
         self.running_status = False
         if self.server_socket:
+            try:
+                self.server_socket.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
             self.server_socket.close()
             print(f"Peer on {self.ip}:{self.port} closed.")
-            
+
         for conn in self.seed_connections:
+            try:
+                conn.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
             try:
                 conn.close()
             except Exception as e:
                 print(f"Error closing a peer to seed connection: {e}")
+
         for conn in self.peer_connections:
+            try:
+                conn.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
             try:
                 conn.close()
             except Exception as e:
                 print(f"Error closing a peer to peer connection: {e}")
-
 

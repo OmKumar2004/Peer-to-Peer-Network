@@ -7,8 +7,9 @@ if __name__ == "__main__":
     config_file = open("config.txt", "r")
     config = config_file.readlines()
     config_file.close()
-    seeds = []
+    seeds_connection = []
     peers = []
+    seeds = []
     
     # Creating instances of seeds and storing them in a list
     for i in range(len(config)):
@@ -18,7 +19,8 @@ if __name__ == "__main__":
         config[i] = config[i].strip()
         seed = Seeds(config[i].split(':')[0], config[i].split(':')[1])
         seed.creation()
-        seeds.append((seed.ip, int(seed.port)))
+        seeds_connection.append((seed.ip, int(seed.port)))
+        seeds.append(seed)
         # print(seed.ip,"   ", seed.port)
 
 
@@ -31,7 +33,7 @@ if __name__ == "__main__":
         peer = Peers('127.0.0.1', peer_port)
         peer_port+=1
         peer.creation()
-        peer.connect(seeds) #randomly selects the seed to connect (n/2)+1
+        peer.connect(seeds_connection) #randomly selects the seed to connect (n/2)+1
         #randomly select the peer from the peer list and check if it is alive and make it as dead
         # if random.randint(1, 100) <= 20:
         #     peer.isDead = True
@@ -48,6 +50,6 @@ if __name__ == "__main__":
         for peer in peers:
             peer.close()
         for seed in seeds:
-            seed.close()
-    
+            seed.close()    
+   
     
