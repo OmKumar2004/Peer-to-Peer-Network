@@ -32,12 +32,18 @@ if __name__ == "__main__":
         peer.creation()
         peer.connect(seeds) #randomly selects the seed to connect (n/2)+1
         peers.append(peer)
-
-    time.sleep(15)
-    for peer in peers:
-        peer.close()
-    time.sleep(5)
-    for seed in seeds:
-        seed.close()
+        
+        
+        
+        
+    try:
+        while True:
+            time.sleep(1)  # Run indefinitely until a keyboard interrupt is received
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt received. Closing peers and seeds...")
+        for peer in peers:
+            peer.close()
+        for seed in seeds:
+            seed.close()
     
     

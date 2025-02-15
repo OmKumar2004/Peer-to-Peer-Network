@@ -10,7 +10,7 @@ class Seeds:
         self.server_socket = None
         
         self.peer_list = []
-        
+        self.running_status = True
 
 
     def creation(self):  # activate (fulfiling it as server)
@@ -27,7 +27,7 @@ class Seeds:
 
     #runs in background to acceps incoming connections
     def accept_connections(self):
-        while True:
+        while self.running_status:
             try:
                 connection, address = self.server_socket.accept()           # Accepting all incoming connections
                 print(f"Seed({self.ip}:{self.port}) -> New connection from {address[0]}:{address[1]}")
@@ -42,7 +42,7 @@ class Seeds:
     
     #handles the new peer connection
     def handle_peer_connection(self,connection: socket.socket,address):
-        while True:
+        while self.running_status:
             try:
                 data = connection.recv(1024)
                 if not data:
@@ -73,14 +73,11 @@ class Seeds:
                 break
         connection.close()
             
-    
-    # def new_peer_registration(self, ip, port):  # registering new peers
-    #     return ip, port
 
-    # def remove_dead_peer(self, msg_dead):  # removing dead peers
-    #     pass
+
 
     def close(self):
+        self.running_status = False
         if self.server_socket:
             self.server_socket.close()
             print(f"Seed server on {self.ip}:{self.port} closed.")
