@@ -14,7 +14,7 @@ class Peers:
         self.seed_list = []
         self.peer_list = []
         self.seed_connections: List[socket.socket] = []       # List of sockets of connections when it is behaving as client
-        self.peer_connections = []
+        self.peer_connections: List[socket.socket] = []
         
         self.message_hashes = set()
         
@@ -45,8 +45,21 @@ class Peers:
         print("hi 3")
         self.connect_to_peers()
         print("hi 4")
+        thread = threading.Thread(target=self.gossip_sender_all, daemon=True)
+        thread.start()
         
 
+    def gossip_sender_all(self):
+        for i in range(10):
+            message = f"{time.time()}:{self.ip}:{self.port}:m"
+            message_hash = hash(message)
+            self.message_hashes.add(message_hash)
+            for peer in self.peer_connections:
+                thread = threading.Thread(target=self.gossip_sender_peer, args=(peer,message_hash), daemon=True)
+                thread.start()
+    
+    def gossip_sender_peer(self, peer: socket.socket, message_hash: int):
+        peer.sendall(f"GOSSIP:{message_hash}".encode('utf-8'))                      # Adding GOSSIP to the hash message
     
     def accept_connections(self):
         while True:
@@ -67,6 +80,7 @@ class Peers:
                 data = connection.recv(1024)
                 if not data:
                     break
+                data = data.decode('utf-8')
                 print(f"Peer(server)({self.ip}:{self.port}) -> Received data from {address[0]}:{address[1]}: {data}")        #L Will now handle the data  
                 # self.peer_list.append((address[0], address[1]))
                 # print(self.peer_list)
@@ -124,7 +138,7 @@ class Peers:
                 print("p1")
                 self.peer_connections.append(peer_socket)
                 print(f"Peer(client)({self.ip}:{self.port}) -> Connected to peer {peer[0]}:{peer[1]}")
-                peer_socket.sendall(b"Hello from Peer(client)")
+                # peer_socket.sendall("Hello from Peer(client)".encode('utf-8'))
                 
             except socket.error as e:
                 print(f"Peer(client)({self.ip}:{self.port}) -> Failed to connect to peer {peer[0]}:{peer[1]}. Error:{e}")
