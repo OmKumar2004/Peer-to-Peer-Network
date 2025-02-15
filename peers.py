@@ -17,7 +17,7 @@ class Peers:
         self.peer_connections: List[socket.socket] = []
         
         self.message_hashes = set()
-        
+        self.running_status = True
         
         
     def creation(self):  # activate (fulfiling it as server)
@@ -54,7 +54,7 @@ class Peers:
     # Modify gossip_receiver to handle multiple or concatenated messages
     def gossip_receiver(self):
         buffer = ""
-        while True:
+        while self.running_status:
             try:
                 for peer in self.peer_connections:
                     data = peer.recv(1024)
@@ -80,47 +80,28 @@ class Peers:
             except Exception as e:
                 print(f"Peer(server)({self.ip}:{self.port}) -> Error handling peer connection: {e}")
                 break  
-        
-        
-    # def gossip_receiver(self):
-    #     while True:
-    #         try:
-    #             for peer in self.peer_connections:
-    #                 data = peer.recv(1024)
-    #                 if not data:
-    #                     continue
-    #                 data = data.decode('utf-8')
-    #                 print(f"Peer(server)({self.ip}:{self.port}) -> Received: {data}")
-    #                 if data.startswith("GOSSIP:"):
-    #                     message_hash = int(data.split(":")[1])
-    #                     print(f"dkfdkfkdfjkdkf:{message_hash}")
-    #                     if message_hash not in self.message_hashes:
-    #                         self.message_hashes.add(message_hash)
-    #                         for peer_socket in self.peer_connections:
-    #                             if peer_socket != peer:
-    #                                 thread = threading.Thread(target=self.gossip_sender_peer, args=(peer_socket,message_hash), daemon=True)
-    #                                 thread.start()
-    #         except Exception as e:
-    #             print(f"Peer(server)({self.ip}:{self.port}) -> Error handling peer connection: {e}")
-    #             break        
-               
 
     def gossip_sender_all(self):
         for i in range(10):
-            
+            if not self.running_status:
+                break
             message = f"{time.strftime("%H:%M:%S")}:{self.ip}:{self.port}:m"
             message_hash = hash(message)
             self.message_hashes.add(message_hash)
             for peer in self.peer_connections:
                 thread = threading.Thread(target=self.gossip_sender_peer, args=(peer,message_hash), daemon=True)
                 thread.start()
+            time.sleep(5)
     
     def gossip_sender_peer(self, peer: socket.socket, message_hash: int):
-        peer.sendall(f"GOSSIP:{message_hash}\n".encode('utf-8'))                      # Adding GOSSIP to the hash message
-        print(f"Peer(server)({self.ip}:{self.port}) -> Sent: GOSSIP:{message_hash}")
-    
+        try:
+            peer.sendall(f"GOSSIP:{message_hash}\n".encode('utf-8'))                      # Adding GOSSIP to the hash message
+            print(f"Peer(server)({self.ip}:{self.port}) -> Sent: GOSSIP:{message_hash}")
+        except Exception as e:
+            print(f"Peer(server)({self.ip}:{self.port}) -> Error sending gossip to peer: {e}")
+            
     def accept_connections(self):
-        while True:
+        while self.running_status:
             try:
                 connection, address = self.server_socket.accept()
                 print(f"Peer(server)({self.ip}:{self.port}) -> New connection from {address[0]}:{address[1]}")
@@ -189,6 +170,7 @@ class Peers:
                 print(f"Peer(client)({self.ip}:{self.port}) -> Failed to connect to peer {peer[0]}:{peer[1]}. Error:{e}")
 
     def close(self):
+        self.running_status = False
         if self.server_socket:
             self.server_socket.close()
             print(f"Peer on {self.ip}:{self.port} closed.")
