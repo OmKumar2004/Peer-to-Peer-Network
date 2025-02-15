@@ -1,5 +1,9 @@
 # Peer-to-Peer-Network
-Todos
+---
+
+## Todos
+
+### Completed Tasks
 - [x] creation of seeds and peers
 - [x] peer acting as server as well as client
 - [x] seed acting as client
@@ -8,5 +12,9 @@ Todos
 - [x] Message Passing (normal, death, ping)
 - [x] Dead Node implementation and removal (partially done)
 - [x] Ping mechanism (will be like message only)
-- [ ] handling the sudden death of peer externally (like keyboard interrupt,closing of ports)
+
+### Pending Tasks
+- [ ] handling the sudden death of peer externally (like keyboard interrupt, closing of ports)
 - [ ] Powerlaw distribution (imp)
+- [ ] Adding \n to fix the printing statement 
+- [ ] Why Error handling peer connection and Error sending pong messages in output
