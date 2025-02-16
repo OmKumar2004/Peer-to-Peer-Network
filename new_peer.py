@@ -4,6 +4,8 @@ import signal
 import os
 from peers import Peers
 
+seeds_connection = []
+
 def signal_handler(sig, frame):
     global peer_instance
     print("Termination signal received, closing peer.")
@@ -21,7 +23,6 @@ if __name__ == "__main__":
         sys.exit(1)
         
     # Read seeds from the config file
-    seeds_connection = []
     with open("config.txt", "r") as config_file:
         config = config_file.readlines()
     for line in config:

@@ -30,10 +30,10 @@ class Peers:
     def creation(self):  # activate (fulfiling it as server)
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.ip, self.port))
-        self.server_socket.listen(100)
+        self.server_socket.listen()
+        print(f"Peer listening on {self.ip}:{self.port}")
         thread = threading.Thread(target=self.accept_connections, daemon=True)
         thread.start()
-        print(f"Peer listening on {self.ip}:{self.port}")
     
     
     def connect(self, seeds):   # Now Peer behaving as client
@@ -213,31 +213,27 @@ class Peers:
                 break
             
             
-    
-        
             
     def connect_to_seed(self, seed):    # Now Peer behaving as client
         try:
             seed_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)     # No need to bind to any port or ip it is in built handled by os
             seed_socket.connect((seed[0] , seed[1]))
-            
+            print(f"Peer(client)({self.ip}:{self.port}) -> Connected to {seed[0]}:{seed[1]}")
             #sending the server port of peer to seed
             seed_socket.sendall(f"PEER_SERVER:{self.port}\n".encode('utf-8'))
             self.seed_connections.append(seed_socket)
-            print(f"Peer(client)({self.ip}:{self.port}) -> Connected to {seed[0]}:{seed[1]}")
         except socket.error as e:
             print(f"Peer(client)({self.ip}:{self.port}) -> Failed to connect to seed {seed[0]}:{seed[1]}. Error:{e}")
 
 
     def request_peer_lists(self):
-                
         for seed_socket in self.seed_connections:
             try:
                 # print("hi 5")
                 # seed_socket.sendall(b"REQUEST_PEER_LIST")
                 seed_socket.sendall(f"REQUEST_PEER_LIST:{self.port}\n".encode('utf-8'))
                 # print("hi 6")
-                peer_list_str = seed_socket.recv(1024).decode('utf-8')
+                peer_list_str = seed_socket.recv(1024).decode('utf-8')                  # Sending and receiving on same socket (can be done in TCP connections)
                 # peer_list_str = peer_list_str.decode('utf-8')
                 # print("hi 7")
                 
@@ -253,16 +249,14 @@ class Peers:
                 print(f"Peer(client)({self.ip}:{self.port}) -> Error requesting peer list from {seed_socket.getpeername()}: {e}")
         
 
-    def connect_to_peers(self):     # Acting as client
-        
+    def connect_to_peers(self):     # Acting as client  
         for peer in set(self.peer_list):
             try:
-                if peer[0] == self.ip and peer[1] == self.port:
+                if peer[0] == self.ip and peer[1] == self.port:     # Skip connecting to self
                     continue
                 peer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 print(peer[0],"  ", peer[1])
                 peer_socket.connect((peer[0], peer[1]))
-                print("p1")
                 self.peer_connections.append(peer_socket)
                 
                 self.ping_tracker[peer_socket]=0

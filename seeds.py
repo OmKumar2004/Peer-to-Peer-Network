@@ -19,10 +19,10 @@ class Seeds:
         try:
             self.server_socket.bind((self.ip, self.port))
             self.server_socket.listen(100)
+            print(f"Seed activated: Listening on {self.ip}:{self.port}")
             thread = threading.Thread(target=self.accept_connections, daemon=True)
             thread.start()
-            print(f"Process ID (PID): {os.getpid()}, Thread ID: {thread.ident}")
-            print(f"Seed activated: Listening on {self.ip}:{self.port}")
+            # print(f"Process ID (PID): {os.getpid()}, Thread ID: {thread.ident}")
         except socket.error as e:
             print(f"Failed to activate seed on {self.ip}:{self.port}. Error: {e}")
 
@@ -49,13 +49,14 @@ class Seeds:
             try:
                 data = connection.recv(1024)
                 if not data:
-                    break
+                    buffer = ""
+                    continue
                 buffer += data.decode('utf-8')
                 while "\n" in buffer:
                     line, buffer = buffer.split("\n", 1)
                     if not line:
                         continue
-                    if line.startswith("PEER_SERVER:"):
+                    if line.startswith("PEER_SERVER:"):             # Server port of the peer received
                         try:
                             server_port = int(line.split(":")[1])
                         except ValueError:
@@ -75,11 +76,13 @@ class Seeds:
                                 print(f"Invalid dead port in message: {line}")
                                 continue
                             try:
-                                self.peer_list.remove((dead_ip, dead_port))
-                                self.seed_sockets.remove(connection)
-                                connection.close()
+                                if (dead_ip, dead_port) in self.peer_list:
+                                    self.peer_list.remove((dead_ip, dead_port))
+                                    conn = next((conn for conn in self.seed_sockets if conn.getpeername() == None), None)
+                                    if conn is not None:
+                                        self.seed_sockets.remove(conn)
+                                        conn.close()                                      
                             except ValueError:
-                                # pass
                                 print(f"Peer {dead_ip}:{dead_port} not found in peer list.")
                             print(f"Seed({self.ip}:{self.port}) -> Peer {dead_ip}:{dead_port} marked as dead.")
                     else:
@@ -88,7 +91,8 @@ class Seeds:
                 if self.running_status:
                     print(f"Seed({self.ip}:{self.port}) -> Error handling peer connection: {e}")
                 break
-        connection.close()
+        if connection:
+            connection.close()
     
                     
     def close(self):
@@ -109,7 +113,7 @@ class Seeds:
             try:
                 conn.close()
             except Exception as e:
-                print(f"Error closing a seed connection: {e}")
+                print(f"This connection of this seed with peer is already closed")
 
 
     

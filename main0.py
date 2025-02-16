@@ -65,6 +65,6 @@ if __name__ == "__main__":
     # except KeyboardInterrupt:
     #     # Fallback in case signal_handler isn't triggered
     #     signal_handler(None, None)
-    print("Seed nodes created. Press Ctrl+C to exit.")
+    print("Seed nodes created.")
     while True:
         time.sleep(1)
