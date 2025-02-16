@@ -254,8 +254,11 @@ class Peers:
         
 
     def connect_to_peers(self):     # Acting as client
+        
         for peer in set(self.peer_list):
             try:
+                if peer[0] == self.ip and peer[1] == self.port:
+                    continue
                 peer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 print(peer[0],"  ", peer[1])
                 peer_socket.connect((peer[0], peer[1]))

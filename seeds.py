@@ -79,7 +79,7 @@ class Seeds:
                                 self.seed_sockets.remove(connection)
                                 connection.close()
                             except ValueError:
-                                pass
+                                # pass
                                 print(f"Peer {dead_ip}:{dead_port} not found in peer list.")
                             print(f"Seed({self.ip}:{self.port}) -> Peer {dead_ip}:{dead_port} marked as dead.")
                     else:
