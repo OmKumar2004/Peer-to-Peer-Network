@@ -38,51 +38,59 @@ class Seeds:
                 thread.start()
 
             except Exception as e:
-                print(f"Seed({self.ip}:{self.port}) -> Error accepting connection: {e}")
+                if self.running_status:
+                    print(f"Seed({self.ip}:{self.port}) -> Error accepting connection: {e}")
                 break
     
     #handles the new peer connection
-    def handle_peer_connection(self,connection: socket.socket,address):
+    def handle_peer_connection(self, connection: socket.socket, address):
+        buffer = ""
         while self.running_status:
             try:
                 data = connection.recv(1024)
                 if not data:
                     break
-                
-                message = data.decode('utf-8')
-                  
-                if message.startswith("PEER_SERVER:"):
-                    server_port = int(message.split(":")[1])
-                    self.peer_list.append((address[0], server_port))
-                    self.seed_sockets.append(connection)
-                    
-                elif message.startswith("REQUEST_PEER_LIST"):
-                    peer_list_str = '\n'.join([f"{ip}:{port}" for ip, port in self.peer_list])
-                    connection.sendall(peer_list_str.encode('utf-8'))
-                elif message.startswith("DEAD_NODE:"):
-                    dead_ip, dead_port = message.split(":")[1], message.split(":")[2]
-                    self.peer_list.remove((dead_ip), int(dead_port))
-                    self.seed_sockets.remove(connection)
-                    # connection.close()         #commenting this to prevent the seed from closing the connection   
-                    print(f"Seed({self.ip}:{self.port}) -> Peer {dead_ip}:{dead_port} marked as dead.")
-                           
-                    
-                
+                buffer += data.decode('utf-8')
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    if not line:
+                        continue
+                    if line.startswith("PEER_SERVER:"):
+                        try:
+                            server_port = int(line.split(":")[1])
+                        except ValueError:
+                            continue
+                        self.peer_list.append((address[0], server_port))
+                        self.seed_sockets.append(connection)
+                    elif line.startswith("REQUEST_PEER_LIST"):
+                        peer_list_str = '\n'.join([f"{ip}:{port}" for ip, port in self.peer_list]) + "\n"
+                        connection.sendall(peer_list_str.encode('utf-8'))
+                    elif line.startswith("DEAD_NODE:"):
+                        parts = line.split(":")
+                        if len(parts) >= 3:
+                            dead_ip = parts[1]
+                            try:
+                                dead_port = int(parts[2])
+                            except ValueError:
+                                print(f"Invalid dead port in message: {line}")
+                                continue
+                            try:
+                                self.peer_list.remove((dead_ip, dead_port))
+                                self.seed_sockets.remove(connection)
+                                connection.close()
+                            except ValueError:
+                                pass
+                                print(f"Peer {dead_ip}:{dead_port} not found in peer list.")
+                            print(f"Seed({self.ip}:{self.port}) -> Peer {dead_ip}:{dead_port} marked as dead.")
+                    else:
+                        continue
             except Exception as e:
-                print(f"Seed({self.ip}:{self.port}) -> Error handling peer connection: {e}")
+                if self.running_status:
+                    print(f"Seed({self.ip}:{self.port}) -> Error handling peer connection: {e}")
                 break
         connection.close()
-            
-
-
-    # def close(self):
-    #     self.running_status = False
-    #     if self.server_socket:
-    #         self.server_socket.close()
-    #         print(f"Seed server on {self.ip}:{self.port} closed.")
-    #     for conn in self.seed_sockets:
-    #         conn.close()
     
+                    
     def close(self):
         self.running_status = False
         if self.server_socket:
