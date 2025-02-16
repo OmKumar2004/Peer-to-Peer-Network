@@ -3,10 +3,12 @@ import time
 import signal
 import os
 from peers import Peers
+from log_util import log_message
 
 seeds_connection = []
-
+assigned_port = 0
 def signal_handler(sig, frame):
+    log_message("Termination signal received, closing peer of port " + str(assigned_port))
     global peer_instance
     print("Termination signal received, closing peer.")
     peer_instance.close()

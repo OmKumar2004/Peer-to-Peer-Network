@@ -2,6 +2,7 @@ import socket
 import threading
 import os
 from typing import List
+from log_util import log_message
 
 class Seeds:
     def __init__(self, ip, port):
@@ -84,6 +85,8 @@ class Seeds:
                                         conn.close()                                      
                             except ValueError:
                                 print(f"Peer {dead_ip}:{dead_port} not found in peer list.")
+                            # print(f"Seed({self.ip}:{self.port}) -> Peer {dead_ip}:{dead_port} marked as dead.")
+                            log_message(f"Seed({self.ip}:{self.port}) -> Peer {dead_ip}:{dead_port} marked as dead.")
                             print(f"Seed({self.ip}:{self.port}) -> Peer {dead_ip}:{dead_port} marked as dead.")
                     else:
                         continue
