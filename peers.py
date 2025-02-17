@@ -65,8 +65,9 @@ class Peers:
     def ping_sender(self):
         while self.running_status and not self.isDead:
             for peer_socket in self.peer_connections:
-                thread = threading.Thread(target=self.ping_sender_peer, args=(peer_socket,), daemon=True)
-                thread.start()
+                # thread = threading.Thread(target=self.ping_sender_peer, args=(peer_socket,), daemon=True)
+                # thread.start()
+                self.ping_sender_peer(peer_socket)
             time.sleep(PING_INTERVAL)
 
     
@@ -183,7 +184,7 @@ class Peers:
                 
     # Modify gossip_receiver to handle multiple or concatenated messages
     def gossip_receiver(self):
-        while self.running_status and not self.isDead:
+        if self.running_status and not self.isDead:
             try:
                 for peer in self.peer_connections:
                     buffer = ""
@@ -219,35 +220,36 @@ class Peers:
             except Exception as e:
                 if self.running_status:
                     print(f"Peer(server)({self.ip}:{self.port}) -> Error handling peer connection: {e}")
-                break  
+                # break 
     
     def peer_listener(self, peer: socket.socket,buffer: str):
-        data = peer.recv(1024)
-        if not data:
-            return 
-        buffer += data.decode('utf-8')
-        while "\n" in buffer:
-            line, buffer = buffer.split("\n", 1)
-            if line:
-                print(f"Peer(server)({self.ip}:{self.port}) -> Received: {line}")
-                if line.startswith("GOSSIP:"):
-                    try:
-                        message_hash = int(line.split("GOSSIP:")[1])
-                    except ValueError:
-                        print(f"Failed to parse message hash from: {line}")
-                        break
-                    if message_hash not in self.message_hashes:
-                        self.message_hashes.add(message_hash)
-                        for peer_socket in self.peer_connections:
-                            if peer_socket != peer:
-                                thread = threading.Thread(target=self.gossip_sender_peer, args=(peer_socket, message_hash), daemon=True)
-                                thread.start()
-                elif line.startswith("PING"):
-                    peer.sendall("PONG\n".encode('utf-8'))
-                    print(f"Peer(server)({self.ip}:{self.port}) -> Received: PING from {peer.getpeername()} and Send: PONG")
-                elif line.startswith("PONG"):
-                    self.ping_tracker[peer] = [time.time(), 0]
-                    print(f"Peer(server)({self.ip}:{self.port}) -> Received: PONG from {peer.getpeername()} and updated the ping tracker")
+        while self.running_status and not self.isDead:
+            data = peer.recv(1024)
+            if not data:
+                return 
+            buffer += data.decode('utf-8')
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                if line:
+                    print(f"Peer(server)({self.ip}:{self.port}) -> Received: {line}")
+                    if line.startswith("GOSSIP:"):
+                        try:
+                            message_hash = int(line.split("GOSSIP:")[1])
+                        except ValueError:
+                            print(f"Failed to parse message hash from: {line}")
+                            break
+                        if message_hash not in self.message_hashes:
+                            self.message_hashes.add(message_hash)
+                            for peer_socket in self.peer_connections:
+                                if peer_socket != peer:
+                                    thread = threading.Thread(target=self.gossip_sender_peer, args=(peer_socket, message_hash), daemon=True)
+                                    thread.start()
+                    elif line.startswith("PING"):
+                        peer.sendall("PONG\n".encode('utf-8'))
+                        print(f"Peer(server)({self.ip}:{self.port}) -> Received: PING from {peer.getpeername()} and Send: PONG")
+                    elif line.startswith("PONG"):
+                        self.ping_tracker[peer] = [time.time(), 0]
+                        print(f"Peer(server)({self.ip}:{self.port}) -> Received: PONG from {peer.getpeername()} and updated the ping tracker")
     
     def accept_connections(self):
         while self.running_status and not self.isDead:
@@ -311,7 +313,7 @@ class Peers:
                 peer_socket.connect((peer[0], peer[1]))
                 self.peer_connections.append(peer_socket)
                 
-                self.ping_tracker[peer_socket]=0
+                # self.ping_tracker[peer_socket]=0
                 print(f"Peer(client)({self.ip}:{self.port}) -> Connected to peer {peer[0]}:{peer[1]}")
                 # peer_socket.sendall("Hello from Peer(client)".encode('utf-8'))
                 
