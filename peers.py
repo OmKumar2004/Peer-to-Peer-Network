@@ -49,8 +49,8 @@ class Peers:
         #     print(peer)
         self.connect_to_peers()
         
-        thread_receiver = threading.Thread(target=self.gossip_receiver,daemon=True)
-        thread_receiver.start() 
+        # thread_receiver = threading.Thread(target=self.gossip_receiver,daemon=True)
+        # thread_receiver.start() 
         
         thread_ping_sender = threading.Thread(target=self.ping_sender, daemon=True)
         thread_ping_sender.start()
@@ -265,9 +265,9 @@ class Peers:
                 connection, address = self.server_socket.accept()
                 print(f"Peer(server)({self.ip}:{self.port}) -> New connection from {address[0]}:{address[1]}")
                 # self.peer_connections.append(connection)
-                
-                # thread = threading.Thread(target=self.handle_peer_connection, args=(connection, address), daemon=True)
-                # thread.start()
+                buffer = ""
+                thread = threading.Thread(target=self.peer_listener, args=(connection, buffer), daemon=True)
+                thread.start()
                 
             except Exception as e:
                 if self.running_status:
