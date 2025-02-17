@@ -1,28 +1,34 @@
 import sys
 import time
 import signal
-import os
 from peers import Peers
+from log import log
 
 seeds_connection = []
 
 def signal_handler(sig, frame):
     global peer_instance
-    print("Termination signal received, closing peer.")
+    msg = "Termination signal received, peer is dead."
+    print(msg)
+    log(msg)
     peer_instance.close()
     sys.exit(0)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python new_peer.py <port>")
+        msg = "Usage: python new_peer.py <port>"
+        print(msg)
+        log(msg)
         sys.exit(1)
     try:
         assigned_port = int(sys.argv[1])
     except ValueError:
-        print("Invalid port number.")
+        msg = "Invalid port number."
+        print(msg)
+        log(msg)
         sys.exit(1)
         
-    # Read seeds from the config file
+    # Read seeds from the config file to connect to
     with open("config.txt", "r") as config_file:
         config = config_file.readlines()
     for line in config:
@@ -34,16 +40,19 @@ if __name__ == "__main__":
         ip, port = line.split(':')
         seeds_connection.append((ip, int(port)))
     
-    # Create the peer instance
+    # Creating peer instance 
     peer_instance = Peers('127.0.0.1', assigned_port)
     peer_instance.creation()
-    time.sleep(1)  # Give time for the server socket to start
+    time.sleep(1)  # waiting some time for the server socket to start
     peer_instance.connect(seeds_connection)
     
-    # Register signal handlers so that if this terminal is closed the peer cleans up
+
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
-    print(f"Peer running on 127.0.0.1:{assigned_port}.")
+    msg = f"Peer running on 127.0.0.1:{assigned_port}."
+    print(msg)
+    log(msg)
+    
     while True:
         time.sleep(1)
