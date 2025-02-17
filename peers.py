@@ -45,18 +45,14 @@ class Peers:
         
         # Requesting the peer list from all connected seeds 
         self.request_peer_lists()
-        # for peer in self.peer_list:
-        #     print(peer)
         self.connect_to_peers()
         
-        # thread_receiver = threading.Thread(target=self.gossip_receiver,daemon=True)
-        # thread_receiver.start() 
+
         
         thread_ping_sender = threading.Thread(target=self.ping_sender, daemon=True)
         thread_ping_sender.start()
         
-        # thread_ping_receiver = threading.Thread(target=self.ping_receiver, daemon=True)
-        # thread_ping_receiver.start()
+
         
         thread_sender = threading.Thread(target=self.gossip_sender_all, daemon=True)
         thread_sender.start()
@@ -97,30 +93,6 @@ class Peers:
                
             peer_socket.sendall("PING\n".encode('utf-8'))
             print(f"Peer(client)({self.ip}:{self.port}) -> Sent: PING to {peer_socket.getpeername()}")
-            # Use select to wait for a response with a timeout
-            # print("-------------------------hihihihihi--------------------")
-            # readable, _, _ = select.select([peer_socket], [], [], PING_MAX_WAIT)
-            # if readable:
-            #     # print("-------------------------qqqqqqqqqqqqqq--------------------")
-            #     response = peer_socket.recv(1024).decode('utf-8').strip()
-            #     # print("-------------------------wwwwwwwwwwwwwwwwwwww--------------------")
-            #     if response == "PONG":
-            #         print(f"Peer(client)({self.ip}:{self.port}) -> Received: Ping_back from {peer_socket.getpeername()}")
-            #         self.ping_tracker[peer_socket] = 0 
-            # else:
-            #     print(f"Peer(client)({self.ip}:{self.port}) -> Ping timed out for {peer_socket.getpeername()}")
-            #     self.ping_tracker[peer_socket] += 1
-            #     if self.ping_tracker[peer_socket] >= 3:
-            #         print(f"Peer(client)({self.ip}:{self.port}) -> Peer {peer_socket.getpeername()} is dead")
-                    
-            #         if peer_socket in self.peer_connections:
-            #             self.peer_connections.remove(peer_socket)
-            #         if peer_socket.getpeername() in self.peer_list:
-            #             self.peer_list.remove(peer_socket.getpeername())
-            #         for seed_socket in self.seed_connections:
-            #             dead_msg = f"DEAD_NODE:{peer_socket.getpeername()[0]}:{peer_socket.getpeername()[1]}:{time.strftime('%H:%M:%S')}:{self.ip}:{self.port}\n"
-            #             seed_socket.sendall(dead_msg.encode('utf-8'))
-            #         #peer_socket.close()  #commenting this to prevent the peer from closing the connection
         except Exception as e:
             if not self.running_status:
                 return
@@ -130,37 +102,6 @@ class Peers:
                 peer_name = "Unknown"
             print(f"Peer(client)({self.ip}:{self.port}) -> Error {e}")
             
-    # def ping_receiver(self):
-    #     while self.running_status and not self.isDead:
-    #         for seed_socket in self.seed_connections:
-    #             try:
-    #                 data = seed_socket.recv(1024).decode('utf-8')
-    #                 if not data:
-    #                     continue
-                    
-    #                 messages = data.split("\n")
-    #                 for msg in messages:
-    #                     if msg.strip()=="":
-    #                         continue
-    #                     if msg.startswith("PING"):
-    #                         seed_socket.sendall("PONG\n".encode('utf-8'))
-    #                         print(f"Peer(client)({self.ip}:{self.port}) -> Received: PING from {seed_socket.getpeername()}")
-    #                 # if data.startswith("PING"):
-    #                 #     seed_socket.sendall("PONG".encode('utf-8'))
-    #                 #     print(f"Peer(client)({self.ip}:{self.port}) -> Received: PING from {seed_socket.getpeername()}")
-    #                 # else:
-    #                 #     continue
-    #             except Exception as e:
-    #                 if not self.running_status:
-    #                     return
-    #                 try:
-    #                     seed_name = seed_socket.getpeername()
-    #                 except Exception:
-    #                     seed_name = "Unknown"
-                    
-    #                     print(f"Peer(client)({self.ip}:{self.port}) -> Error receiving data from {seed_name}: {e}")
-                    
-    
     def gossip_sender_all(self):
         for i in range(NUM_MESSAGES):
             if not self.running_status or self.isDead:
@@ -193,32 +134,6 @@ class Peers:
                     thread_peer_listener = threading.Thread(target=self.peer_listener, args=(peer,buffer), daemon=True)
                     thread_peer_listener.start()
                     
-                    # data = peer.recv(1024)
-                    # if not data:
-                    #     continue
-                    # buffer += data.decode('utf-8')
-                    # while "\n" in buffer:
-                    #     line, buffer = buffer.split("\n", 1)
-                    #     if line:
-                    #         print(f"Peer(server)({self.ip}:{self.port}) -> Received: {line}")
-                    #         if line.startswith("GOSSIP:"):
-                    #             try:
-                    #                 message_hash = int(line.split("GOSSIP:")[1])
-                    #             except ValueError:
-                    #                 print(f"Failed to parse message hash from: {line}")
-                    #                 break
-                    #             if message_hash not in self.message_hashes:
-                    #                 self.message_hashes.add(message_hash)
-                    #                 for peer_socket in self.peer_connections:
-                    #                     if peer_socket != peer:
-                    #                         thread = threading.Thread(target=self.gossip_sender_peer, args=(peer_socket, message_hash), daemon=True)
-                    #                         thread.start()
-                    #         elif line.startswith("PING"):
-                    #             peer.sendall("PONG\n".encode('utf-8'))
-                    #             print(f"Peer(server)({self.ip}:{self.port}) -> Received: PING from {peer.getpeername()}")
-                    #         elif line.startswith("PONG"):
-                    #             self.ping_tracker[peer]
-                    #             print(f"Peer(server)({self.ip}:{self.port}) -> Received: PONG from {peer.getpeername()}")
             except Exception as e:
                 if self.running_status:
                     print(f"Peer(server)({self.ip}:{self.port}) -> Error handling peer connection: {e}")
@@ -324,6 +239,9 @@ class Peers:
                 # self.ping_tracker[peer_socket]=0
                 print(f"Peer(client)({self.ip}:{self.port}) -> Connected to peer {peer[0]}:{peer[1]}")
                 # peer_socket.sendall("Hello from Peer(client)".encode('utf-8'))
+                
+                thread = threading.Thread(target=self.peer_listener, args=(peer_socket, ""), daemon=True)
+                thread.start()
                 
             except socket.error as e:
                 print(f"Peer(client)({self.ip}:{self.port}) -> Failed to connect to peer {peer[0]}:{peer[1]}. Error:{e}")
