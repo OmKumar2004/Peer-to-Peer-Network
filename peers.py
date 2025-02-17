@@ -5,7 +5,7 @@ from typing import List
 import time
 import select
 
-PING_INTERVAL = 2
+PING_INTERVAL = 3
 PING_MAX_WAIT = 5
 GOSSIP_SEND_INTERVAL = 15
 NUM_MESSAGES = 10
@@ -52,8 +52,8 @@ class Peers:
         thread_ping_sender = threading.Thread(target=self.ping_sender, daemon=True)
         thread_ping_sender.start()
         
-        thread_ping_receiver = threading.Thread(target=self.ping_receiver, daemon=True)
-        thread_ping_receiver.start()
+        # thread_ping_receiver = threading.Thread(target=self.ping_receiver, daemon=True)
+        # thread_ping_receiver.start()
         
         thread_sender = threading.Thread(target=self.gossip_sender_all, daemon=True)
         thread_sender.start()
@@ -74,36 +74,51 @@ class Peers:
         if self.isDead or not self.running_status:
             return
         
-        # Remove the explicit timeout setting
-        if peer_socket not in self.ping_tracker:
-            self.ping_tracker[peer_socket] = 0
         try:
-            peer_socket.sendall("PING\n".encode('utf-8'))
-            print(f"Peer(client)({self.ip}:{self.port}) -> Sent: PING to {peer_socket.getpeername()}")
-            # Use select to wait for a response with a timeout
-            # print("-------------------------hihihihihi--------------------")
-            readable, _, _ = select.select([peer_socket], [], [], PING_MAX_WAIT)
-            if readable:
-                # print("-------------------------qqqqqqqqqqqqqq--------------------")
-                response = peer_socket.recv(1024).decode('utf-8').strip()
-                # print("-------------------------wwwwwwwwwwwwwwwwwwww--------------------")
-                if response == "PONG":
-                    print(f"Peer(client)({self.ip}:{self.port}) -> Received: Ping_back from {peer_socket.getpeername()}")
-                    self.ping_tracker[peer_socket] = 0 
-            else:
-                print(f"Peer(client)({self.ip}:{self.port}) -> Ping timed out for {peer_socket.getpeername()}")
-                self.ping_tracker[peer_socket] += 1
-                if self.ping_tracker[peer_socket] >= 3:
+            if peer_socket not in self.ping_tracker:
+                self.ping_tracker[peer_socket] = [time.time(),0]
+            if time.time() - self.ping_tracker[peer_socket][0]  >=PING_MAX_WAIT :
+                counter = self.ping_tracker[peer_socket][1]
+                self.ping_tracker[peer_socket] = [time.time(), counter+1]
+                if self.ping_tracker[peer_socket][1] >= 3:
                     print(f"Peer(client)({self.ip}:{self.port}) -> Peer {peer_socket.getpeername()} is dead")
-                    
                     if peer_socket in self.peer_connections:
                         self.peer_connections.remove(peer_socket)
                     if peer_socket.getpeername() in self.peer_list:
                         self.peer_list.remove(peer_socket.getpeername())
+                        
                     for seed_socket in self.seed_connections:
                         dead_msg = f"DEAD_NODE:{peer_socket.getpeername()[0]}:{peer_socket.getpeername()[1]}:{time.strftime('%H:%M:%S')}:{self.ip}:{self.port}\n"
                         seed_socket.sendall(dead_msg.encode('utf-8'))
-                    #peer_socket.close()  #commenting this to prevent the peer from closing the connection
+                    peer_socket.close()
+                    return
+               
+            peer_socket.sendall("PING\n".encode('utf-8'))
+            print(f"Peer(client)({self.ip}:{self.port}) -> Sent: PING to {peer_socket.getpeername()}")
+            # Use select to wait for a response with a timeout
+            # print("-------------------------hihihihihi--------------------")
+            # readable, _, _ = select.select([peer_socket], [], [], PING_MAX_WAIT)
+            # if readable:
+            #     # print("-------------------------qqqqqqqqqqqqqq--------------------")
+            #     response = peer_socket.recv(1024).decode('utf-8').strip()
+            #     # print("-------------------------wwwwwwwwwwwwwwwwwwww--------------------")
+            #     if response == "PONG":
+            #         print(f"Peer(client)({self.ip}:{self.port}) -> Received: Ping_back from {peer_socket.getpeername()}")
+            #         self.ping_tracker[peer_socket] = 0 
+            # else:
+            #     print(f"Peer(client)({self.ip}:{self.port}) -> Ping timed out for {peer_socket.getpeername()}")
+            #     self.ping_tracker[peer_socket] += 1
+            #     if self.ping_tracker[peer_socket] >= 3:
+            #         print(f"Peer(client)({self.ip}:{self.port}) -> Peer {peer_socket.getpeername()} is dead")
+                    
+            #         if peer_socket in self.peer_connections:
+            #             self.peer_connections.remove(peer_socket)
+            #         if peer_socket.getpeername() in self.peer_list:
+            #             self.peer_list.remove(peer_socket.getpeername())
+            #         for seed_socket in self.seed_connections:
+            #             dead_msg = f"DEAD_NODE:{peer_socket.getpeername()[0]}:{peer_socket.getpeername()[1]}:{time.strftime('%H:%M:%S')}:{self.ip}:{self.port}\n"
+            #             seed_socket.sendall(dead_msg.encode('utf-8'))
+            #         #peer_socket.close()  #commenting this to prevent the peer from closing the connection
         except Exception as e:
             if not self.running_status:
                 return
@@ -156,39 +171,7 @@ class Peers:
                 thread.start()
             time.sleep(GOSSIP_SEND_INTERVAL)
         
-    # Modify gossip_receiver to handle multiple or concatenated messages
-    def gossip_receiver(self):
-        buffer = ""
-        while self.running_status and not self.isDead:
-            try:
-                for peer in self.peer_connections:
-                    data = peer.recv(1024)
-                    if not data:
-                        continue
-                    buffer += data.decode('utf-8')
-                    while "\n" in buffer:
-                        line, buffer = buffer.split("\n", 1)
-                        if line:
-                            print(f"Peer(server)({self.ip}:{self.port}) -> Received: {line}")
-                            if line.startswith("GOSSIP:"):
-                                try:
-                                    message_hash = int(line.split("GOSSIP:")[1])
-                                except ValueError:
-                                    print(f"Failed to parse message hash from: {line}")
-                                    break
-                                if message_hash not in self.message_hashes:
-                                    self.message_hashes.add(message_hash)
-                                    for peer_socket in self.peer_connections:
-                                        if peer_socket != peer:
-                                            thread = threading.Thread(target=self.gossip_sender_peer, args=(peer_socket, message_hash), daemon=True)
-                                            thread.start()
-            except Exception as e:
-                if self.running_status:
-                    print(f"Peer(server)({self.ip}:{self.port}) -> Error handling peer connection: {e}")
-                break  
-
-    
-    
+        
     def gossip_sender_peer(self, peer: socket.socket, message_hash: int):
         try:
             peer.sendall(f"GOSSIP:{message_hash}\n".encode('utf-8'))                      # Adding GOSSIP to the hash message
@@ -196,7 +179,76 @@ class Peers:
         except Exception as e:
             if self.running_status:
                 print(f"Peer(server)({self.ip}:{self.port}) -> Error sending gossip to peer: {e}")
-            
+                
+                
+    # Modify gossip_receiver to handle multiple or concatenated messages
+    def gossip_receiver(self):
+        while self.running_status and not self.isDead:
+            try:
+                for peer in self.peer_connections:
+                    buffer = ""
+                    thread_peer_listener = threading.Thread(target=self.peer_listener, args=(peer,buffer), daemon=True)
+                    thread_peer_listener.start()
+                    
+                    # data = peer.recv(1024)
+                    # if not data:
+                    #     continue
+                    # buffer += data.decode('utf-8')
+                    # while "\n" in buffer:
+                    #     line, buffer = buffer.split("\n", 1)
+                    #     if line:
+                    #         print(f"Peer(server)({self.ip}:{self.port}) -> Received: {line}")
+                    #         if line.startswith("GOSSIP:"):
+                    #             try:
+                    #                 message_hash = int(line.split("GOSSIP:")[1])
+                    #             except ValueError:
+                    #                 print(f"Failed to parse message hash from: {line}")
+                    #                 break
+                    #             if message_hash not in self.message_hashes:
+                    #                 self.message_hashes.add(message_hash)
+                    #                 for peer_socket in self.peer_connections:
+                    #                     if peer_socket != peer:
+                    #                         thread = threading.Thread(target=self.gossip_sender_peer, args=(peer_socket, message_hash), daemon=True)
+                    #                         thread.start()
+                    #         elif line.startswith("PING"):
+                    #             peer.sendall("PONG\n".encode('utf-8'))
+                    #             print(f"Peer(server)({self.ip}:{self.port}) -> Received: PING from {peer.getpeername()}")
+                    #         elif line.startswith("PONG"):
+                    #             self.ping_tracker[peer]
+                    #             print(f"Peer(server)({self.ip}:{self.port}) -> Received: PONG from {peer.getpeername()}")
+            except Exception as e:
+                if self.running_status:
+                    print(f"Peer(server)({self.ip}:{self.port}) -> Error handling peer connection: {e}")
+                break  
+    
+    def peer_listener(self, peer: socket.socket,buffer: str):
+        data = peer.recv(1024)
+        if not data:
+            return 
+        buffer += data.decode('utf-8')
+        while "\n" in buffer:
+            line, buffer = buffer.split("\n", 1)
+            if line:
+                print(f"Peer(server)({self.ip}:{self.port}) -> Received: {line}")
+                if line.startswith("GOSSIP:"):
+                    try:
+                        message_hash = int(line.split("GOSSIP:")[1])
+                    except ValueError:
+                        print(f"Failed to parse message hash from: {line}")
+                        break
+                    if message_hash not in self.message_hashes:
+                        self.message_hashes.add(message_hash)
+                        for peer_socket in self.peer_connections:
+                            if peer_socket != peer:
+                                thread = threading.Thread(target=self.gossip_sender_peer, args=(peer_socket, message_hash), daemon=True)
+                                thread.start()
+                elif line.startswith("PING"):
+                    peer.sendall("PONG\n".encode('utf-8'))
+                    print(f"Peer(server)({self.ip}:{self.port}) -> Received: PING from {peer.getpeername()} and Send: PONG")
+                elif line.startswith("PONG"):
+                    self.ping_tracker[peer] = [time.time(), 0]
+                    print(f"Peer(server)({self.ip}:{self.port}) -> Received: PONG from {peer.getpeername()} and updated the ping tracker")
+    
     def accept_connections(self):
         while self.running_status and not self.isDead:
             try:
