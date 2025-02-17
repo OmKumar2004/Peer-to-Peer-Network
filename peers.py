@@ -143,7 +143,10 @@ class Peers:
         print("-----------Peer Listener-------------")
         while self.running_status and not self.isDead:
             print("-----------Peer Listener_inside_while-------------")
-            data = peer.recv(1024)
+            try:
+                data = peer.recv(1024)
+            except Exception as e:
+                print(f"Peer(server)({self.ip}:{self.port}) -> Error receiving data: {e}")
             print(f"--------Data:  -----{data.decode('utf-8')}-------------")
             if not data:
                 continue 
