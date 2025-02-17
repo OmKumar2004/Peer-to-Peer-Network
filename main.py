@@ -22,7 +22,6 @@ def command_listener():
         cmd = input("Enter command (list/exit): ").strip().lower()
         if cmd == "list":
             print("=== Peer Lists from All Seeds ===")
-            # Option 1: Print separately for each seed
             for seed in seeds:
                 print(f"Seed {seed.ip}:{seed.port} peer list:")
                 for peer in seed.peer_list:
