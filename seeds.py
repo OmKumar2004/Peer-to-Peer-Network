@@ -62,6 +62,7 @@ class Seeds:
                         except ValueError:
                             continue
                         self.peer_list.append((address[0], server_port))
+                        print(f"Seed({self.ip}:{self.port}) -> Peer {address[0]}:{server_port} appended in seeds peer list")
                         self.seed_sockets.append(connection)
                     elif line.startswith("REQUEST_PEER_LIST"):
                         peer_list_str = '\n'.join([f"{ip}:{port}" for ip, port in self.peer_list]) + "\n"
