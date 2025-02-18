@@ -437,15 +437,16 @@ class Peers:
         # Use an offset-based preferential attachment
         # threshold = 1/(peer_degree + 1). Connect if random() > threshold.
         for peer in set(self.peer_list):
-            if len(self.peer_list) != 1:
-                peer_ip, peer_port, peer_degree = peer
-                if peer_ip == self.ip and peer_port == self.port:
-                    continue  # Skip self
-                threshold = 1 / (peer_degree + 1)
-                rand_val = random.random()
-                msg = f"Evaluating connection to {peer_ip}:{peer_port} with degree {peer_degree} -> threshold {threshold:.4f}, random value {rand_val:.4f}"
-                print(msg)
-                log(msg)
+            peer_ip, peer_port, peer_degree = peer
+            if peer_ip == self.ip and peer_port == self.port:
+                continue  # Skip self
+            threshold = 1 / (peer_degree + 1)
+            rand_val = random.random()
+            msg = f"Evaluating connection to {peer_ip}:{peer_port} with degree {peer_degree} -> threshold {threshold:.4f}, random value {rand_val:.4f}"
+            print(msg)
+            log(msg)
+            if len(self.peer_list) == 1:
+                threshold = 0
             if rand_val > threshold:
                 try:
                     peer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
