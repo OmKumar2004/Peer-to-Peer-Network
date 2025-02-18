@@ -100,19 +100,6 @@ class Seeds:
                         # Send the peer list with updated degree info
                         peer_list_str = '\n'.join([f"{ip}:{port}:{degree}" for ip, port, degree in self.peer_list]) + "\n"
                         connection.sendall(peer_list_str.encode('utf-8'))
-                    # if line.startswith("GOODBYE:"):
-                    #     parts = line.split(":")
-                    #     if len(parts) >= 3:
-                    #         goodbye_ip = parts[1]
-                    #         try:
-                    #             goodbye_port = int(parts[2])
-                    #         except ValueError:
-                    #             continue
-                    #         # Remove peer from list, but do NOT log it as "dead"
-                    #         self.peer_list = [p for p in self.peer_list if not (p[0] == goodbye_ip and p[1] == goodbye_port)]
-                    #         msg = f"Seed({self.ip}:{self.port}) -> Peer {goodbye_ip}:{goodbye_port} disconnected gracefully."
-                    #         print(msg)
-                    #         log(msg)
                     if line.startswith("DEAD_NODE:"):
                         parts = line.split(":")
                         if len(parts) >= 3:
@@ -137,7 +124,6 @@ class Seeds:
                                 print(msg)
                                 log(msg)
                     if line.startswith("CONNECTION_UPDATE:"):
-                        # Expected format: CONNECTION_UPDATE:new_ip:new_port:new_degree:peer1_ip:peer1_port,peer2_ip:peer2_port,...
                         parts = line.split(":", 4)
                         if len(parts) < 4:
                             continue
