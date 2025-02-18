@@ -3,6 +3,7 @@ import time
 import signal
 from peers import Peers
 from log import log
+import socket
 
 seeds_connection = []
 
@@ -40,17 +41,16 @@ if __name__ == "__main__":
         ip, port = line.split(':')
         seeds_connection.append((ip, int(port)))
     
-    # Creating peer instance 
-    peer_instance = Peers('127.0.0.1', assigned_port)
+    # Creating peer instance using dynamic IP assignment by passing None.
+    peer_instance = Peers(None, assigned_port)
     peer_instance.creation()
-    time.sleep(1)  # waiting some time for the server socket to start
+    time.sleep(1)  # Waiting for the server socket to start
     peer_instance.connect(seeds_connection)
     
-
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
-    msg = f"Peer running on 127.0.0.1:{assigned_port}."
+    msg = f"Peer running on {peer_instance.ip}:{peer_instance.port}."
     print(msg)
     log(msg)
     

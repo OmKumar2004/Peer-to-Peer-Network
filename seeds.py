@@ -3,9 +3,27 @@ import threading
 from typing import List
 from log import log
 
+
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Connecting to an external host to get the ip address
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = '127.0.0.1'
+    finally:
+        s.close()
+    return ip
+
+
 class Seeds:
-    def __init__(self, ip, port):
-        self.ip = ip
+    def __init__(self, ip=None, port=0):
+        # If no IP is provided, determine the machine's local IP dynamically.
+        if ip is None:
+            self.ip = get_local_ip()
+        else:
+            self.ip = ip
         self.port = int(port)
         self.server_socket = None
         self.seed_sockets: List[socket.socket] = []
@@ -14,18 +32,25 @@ class Seeds:
 
     def creation(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Enable immediate reuse of the address
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             self.server_socket.bind((self.ip, self.port))
+            # If port was set to 0, update self.port with the assigned port.
+            if self.port == 0:
+                self.port = self.server_socket.getsockname()[1]
             self.server_socket.listen(100)
             msg = f"Seed activated: Listening on {self.ip}:{self.port}"
             print(msg)
             log(msg)
             thread = threading.Thread(target=self.accept_connections, daemon=True)
             thread.start()
+            return 1
         except socket.error as e:
             err_msg = f"Failed to activate seed on {self.ip}:{self.port}. Error: {e}"
             print(err_msg)
             # log(err_msg)
+            return 0
 
     def accept_connections(self):
         while self.running_status:
@@ -71,11 +96,24 @@ class Seeds:
                         log(msg)
                         if connection not in self.seed_sockets:
                             self.seed_sockets.append(connection)
-                    elif line.startswith("REQUEST_PEER_LIST:"):
+                    if line.startswith("REQUEST_PEER_LIST:"):
                         # Send the peer list with updated degree info
                         peer_list_str = '\n'.join([f"{ip}:{port}:{degree}" for ip, port, degree in self.peer_list]) + "\n"
                         connection.sendall(peer_list_str.encode('utf-8'))
-                    elif line.startswith("DEAD_NODE:"):
+                    # if line.startswith("GOODBYE:"):
+                    #     parts = line.split(":")
+                    #     if len(parts) >= 3:
+                    #         goodbye_ip = parts[1]
+                    #         try:
+                    #             goodbye_port = int(parts[2])
+                    #         except ValueError:
+                    #             continue
+                    #         # Remove peer from list, but do NOT log it as "dead"
+                    #         self.peer_list = [p for p in self.peer_list if not (p[0] == goodbye_ip and p[1] == goodbye_port)]
+                    #         msg = f"Seed({self.ip}:{self.port}) -> Peer {goodbye_ip}:{goodbye_port} disconnected gracefully."
+                    #         print(msg)
+                    #         log(msg)
+                    if line.startswith("DEAD_NODE:"):
                         parts = line.split(":")
                         if len(parts) >= 3:
                             dead_ip = parts[1]
@@ -98,7 +136,7 @@ class Seeds:
                                 msg = f"Seed({self.ip}:{self.port}) -> Peer {dead_ip}:{dead_port} not found in peer list."
                                 print(msg)
                                 log(msg)
-                    elif line.startswith("CONNECTION_UPDATE:"):
+                    if line.startswith("CONNECTION_UPDATE:"):
                         # Expected format: CONNECTION_UPDATE:new_ip:new_port:new_degree:peer1_ip:peer1_port,peer2_ip:peer2_port,...
                         parts = line.split(":", 4)
                         if len(parts) < 4:
